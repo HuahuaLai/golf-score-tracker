@@ -6,205 +6,539 @@
     <title>高爾夫桿數紀錄器</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
 
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-    <script type="text/babel">
-        // 手動定義 Lucide React 圖示
-        // 在純前端環境中，直接從 CDN 引入整個 Lucide React 庫較為複雜，
-        // 因此我們只定義會用到的圖示。
-        const ChevronLeft = (props) => (
-            React.createElement('svg', { ...props, xmlns: "http://www.w3.org/2000/svg", width: props.size || 24, height: props.size || 24, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" },
-                React.createElement('path', { d: "m15 18-6-6 6-6" })
-            )
-        );
-        const ChevronRight = (props) => (
-            React.createElement('svg', { ...props, xmlns: "http://www.w3.org/2000/svg", width: props.size || 24, height: props.size || 24, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" },
-                React.createElement('path', { d: "m9 18 6-6-6-6" })
-            )
-        );
-    </script>
 </head>
 <body>
     <div id="root"></div>
     <script type="text/babel">
-        // React 應用程式的程式碼從這裡開始
-        const { useState, useEffect, useRef } = React;
+        // 圖示組件定義
+        const ChevronLeft = (props) => (React.createElement('svg', { ...props, xmlns: "http://www.w3.org/2000/svg", width: props.size || 24, height: props.size || 24, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" }, React.createElement('path', { d: "m15 18-6-6 6-6" })));
+        const ChevronRight = (props) => (React.createElement('svg', { ...props, xmlns: "http://www.w3.org/2000/svg", width: props.size || 24, height: props.size || 24, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" }, React.createElement('path', { d: "m9 18 6-6-6-6" })));
+        const UserIcon = (props) => (React.createElement('i', { className: `fas fa-user ${props.className}`, style: { fontSize: props.size || 20 } }));
+        const UsersIcon = (props) => (React.createElement('i', { className: `fas fa-users ${props.className}`, style: { fontSize: props.size || 16 } }));
+        const TrophyIcon = (props) => (React.createElement('i', { className: `fas fa-trophy ${props.className}`, style: { fontSize: props.size || 16 } }));
+        const MedalIcon = (props) => ( React.createElement('i', { className: `fas fa-medal ${props.className}`, style: { fontSize: props.size || 16 } }));
+        const CloseIcon = (props) => (React.createElement('svg', { ...props, xmlns: "http://www.w3.org/2000/svg", width: props.size || 24, height: props.size || 24, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round"},React.createElement('line', {x1:"18", y1:"6", x2:"6", y2:"18"}),React.createElement('line', {x1:"6", y1:"6", x2:"18", y2:"18"})));
+        const GolfBallIcon = (props) => (React.createElement('i', { className: `fas fa-golf-ball-tee ${props.className}`, style: { fontSize: props.size || 16 } }));
+        const ArrowLeftIcon = (props) => (React.createElement('i', { className: `fas fa-arrow-left ${props.className}`, style: { fontSize: props.size || 16 } }));
+        const EditIcon = (props) => (React.createElement('i', { className: `fas fa-pencil-alt ${props.className}`, style: { fontSize: props.size || 16 } }));
+        const CheckIcon = (props) => (React.createElement('i', { className: `fas fa-check ${props.className}`, style: { fontSize: props.size || 16 } }));
 
-        // 確認 Modal 組件 (用於清除紀錄)
-        const ConfirmationModal = ({ message, onConfirm, onCancel }) => {
-          return (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full text-center">
-                <p className="text-lg font-semibold mb-6">{message}</p>
-                <div className="flex justify-around gap-4">
-                  <button
-                    onClick={onConfirm}
-                    className="bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-5 rounded-lg shadow-md
-                               transition duration-200 ease-in-out transform hover:scale-105 active:scale-95 flex-grow"
-                  >
-                    確認
-                  </button>
-                  <button
-                    onClick={onCancel}
-                    className="bg-gray-400 hover:bg-gray-500 text-gray-800 font-bold py-2 px-5 rounded-lg shadow-md
-                               transition duration-200 ease-in-out transform hover:scale-105 active:scale-95 flex-grow"
-                  >
-                    取消
-                  </button>
-                </div>
-              </div>
-            </div>
-          );
+
+        const { useState, useEffect, useRef } = React;
+        const MAX_PLAYERS = 4;
+        const LOCAL_STORAGE_KEYS = {
+            GAME_MODE: 'golfApp_gameMode',
+            SINGLE_PLAYER_DATA: 'golfApp_singlePlayerData',
+            MULTI_PLAYERS_DATA: 'golfApp_multiPlayersData',
+            MULTI_CURRENT_PLAYER_INDEX: 'golfApp_multiCurrentPlayerIndex'
         };
 
-        // 主要 App 組件
-        const App = () => {
-          // 儲存18洞桿數的狀態，初始化為0
-          const [holeScores, setHoleScores] = useState(Array(18).fill(0));
-          // 追蹤目前球洞的狀態 (索引 0 到 17)
-          const [currentHoleIndex, setCurrentHoleIndex] = useState(0);
-          // 儲存總桿數的狀態
-          const [totalScore, setTotalScore] = useState(0);
-          // 確認清除 Modal 的可見性狀態
-          const [showClearConfirm, setShowClearConfirm] = useState(false);
-          // 最近更新球洞的暫時視覺回饋狀態
-          const [lastUpdatedHole, setLastUpdatedHole] = useState(null);
+        const initializePlayerScores = () => Array(18).fill(0);
+        
+        const initializeSinglePlayerData = () => ({
+            name: "球員",
+            scores: initializePlayerScores(),
+            currentHoleIndex: 0,
+        });
 
-          // 當 holeScores 改變時重新計算總桿數的 Effect
-          useEffect(() => {
-            const sum = holeScores.reduce((acc, score) => acc + score, 0);
-            setTotalScore(sum);
-          }, [holeScores]);
-
-          // 處理數字按鈕點擊的函式
-          const handleNumberClick = (num) => {
-            const newScores = [...holeScores];
-            newScores[currentHoleIndex] = num;
-            setHoleScores(newScores);
-
-            // 視覺回饋
-            setLastUpdatedHole(currentHoleIndex);
-            setTimeout(() => setLastUpdatedHole(null), 300); // 300ms 後移除高亮
-
-            // 如果不是最後一洞，則移至下一洞
-            if (currentHoleIndex < 17) {
-              setCurrentHoleIndex(currentHoleIndex + 1);
+        const initializeMultiPlayersData = (nicknames = []) => {
+            const players = [];
+            for (let i = 0; i < MAX_PLAYERS; i++) {
+                players.push({
+                    id: i, 
+                    name: nicknames[i] && nicknames[i].trim() !== "" ? nicknames[i].trim() : `球員 ${i + 1}`,
+                    scores: initializePlayerScores(),
+                    currentHoleIndex: 0,
+                });
             }
-          };
+            return players;
+        };
 
-          // 處理 +1 按鈕點擊的函式
-          const handlePlusOne = () => {
-            const newScores = [...holeScores];
-            newScores[currentHoleIndex] = (newScores[currentHoleIndex] || 0) + 1; // 確保是數字
-            setHoleScores(newScores);
-
-            // 視覺回饋
-            setLastUpdatedHole(currentHoleIndex);
-            setTimeout(() => setLastUpdatedHole(null), 300);
-          };
-
-          // 處理 -1 按鈕點擊的函式
-          const handleMinusOne = () => {
-            const newScores = [...holeScores];
-            newScores[currentHoleIndex] = newScores[currentHoleIndex] > 0 ? newScores[currentHoleIndex] - 1 : 0;
-            setHoleScores(newScores);
-
-            // 視覺回饋
-            setLastUpdatedHole(currentHoleIndex);
-            setTimeout(() => setLastUpdatedHole(null), 300);
-          };
-
-          // 初始化清除動作的函式 (顯示確認 Modal)
-          const handleClearInitiate = () => {
-            setShowClearConfirm(true);
-          };
-
-          // 確認清除動作的函式
-          const handleClearConfirm = () => {
-            setHoleScores(Array(18).fill(0));
-            setCurrentHoleIndex(0); // 重設回第一洞
-            setShowClearConfirm(false); // 隱藏 Modal
-          };
-
-          // 取消清除動作的函式
-          const handleClearCancel = () => {
-            setShowClearConfirm(false); // 隱藏 Modal
-          };
-
-          // 導覽至前一洞的函式
-          const handlePrevHole = () => {
-            setCurrentHoleIndex(prevIndex => Math.max(0, prevIndex - 1));
-          };
-
-          // 導覽至後一洞的函式
-          const handleNextHole = () => {
-            setCurrentHoleIndex(prevIndex => Math.min(17, prevIndex + 1));
-          };
-
-          // 顯示球洞格線的組件
-          const HoleGrid = () => (
-            <div className="grid grid-cols-10 gap-1 p-2 bg-neutral-200 rounded-lg shadow-inner w-full max-w-md mx-auto">
-              {/* 1-9 洞的標頭列 */}
-              {Array.from({ length: 9 }, (_, i) => i + 1).map(holeNum => (
-                <div key={`header-${holeNum}`} className="text-center text-xs font-semibold text-neutral-600 p-1">
-                  {holeNum}
+        const ConfirmationModal = ({ message, onConfirm, onCancel, confirmText = "確認", cancelText = "取消" }) => {
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                <div className="bg-white rounded-lg shadow-xl p-6 max-w-sm w-full text-center">
+                    <p className="text-lg font-semibold mb-6">{message}</p>
+                    <div className="flex justify-around gap-4">
+                    <button
+                        onClick={onConfirm}
+                        className="bg-red-700 hover:bg-red-800 text-white font-bold py-2 px-5 rounded-lg shadow-md transition duration-200 ease-in-out transform hover:scale-105 active:scale-95 flex-grow"
+                    >
+                        {confirmText}
+                    </button>
+                    <button
+                        onClick={onCancel}
+                        className="bg-gray-400 hover:bg-gray-500 text-gray-800 font-bold py-2 px-5 rounded-lg shadow-md transition duration-200 ease-in-out transform hover:scale-105 active:scale-95 flex-grow"
+                    >
+                        {cancelText}
+                    </button>
+                    </div>
                 </div>
-              ))}
-              {/* 用於對齊的空格 */}
-              <div className="col-span-1"></div>
-
-              {/* 1-9 洞的分數 */}
-              {holeScores.slice(0, 9).map((score, index) => (
-                <div
-                  key={`score-${index}`}
-                  className={`col-span-1 flex items-center justify-center p-2 border border-neutral-300 rounded-md text-sm font-bold transition-all duration-150 ease-in-out cursor-pointer
-                    ${index === currentHoleIndex ? 'bg-amber-200 border-amber-400 shadow-md ring-2 ring-amber-500' : 'bg-white hover:bg-neutral-50'}
-                    ${index === lastUpdatedHole ? 'bg-emerald-200 border-emerald-400 animate-pulse' : ''}
-                  `}
-                  onClick={() => setCurrentHoleIndex(index)} // 允許點擊球洞以選擇
-                >
-                  {score === 0 ? '' : score}
                 </div>
-              ))}
-              {/* 1-9 洞的總計 */}
-              <div className="col-span-1 flex items-center justify-center p-2 border border-neutral-300 rounded-md bg-sky-100 text-sm font-bold">
-                {holeScores.slice(0, 9).reduce((acc, s) => acc + s, 0)}
-              </div>
+            );
+        };
+        const RankingsModal = ({ rankedPlayers, onClose }) => {
+            const getMedalDisplay = (rankText) => {
+                if (!rankText || typeof rankText !== 'string') return null; // 防禦性檢查
+                if (rankText.includes('1')) return <TrophyIcon className="text-yellow-400" size={22}/>;
+                if (rankText.includes('2')) return <TrophyIcon className="text-gray-400" size={20}/>; 
+                if (rankText.includes('3')) return <TrophyIcon className="text-orange-400" size={18}/>;
+                if (rankText.includes('4')) return <MedalIcon className="text-slate-500" size={16} />; 
+                return <span className="text-sm font-semibold">{rankText}</span>;
+            };
 
-              {/* 10-18 洞的標頭列 */}
-              {Array.from({ length: 9 }, (_, i) => i + 10).map(holeNum => (
-                <div key={`header-${holeNum}`} className="text-center text-xs font-semibold text-neutral-600 p-1">
-                  {holeNum}
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 font-inter">
+                    <div className="bg-white rounded-xl shadow-2xl p-6 sm:p-8 max-w-md w-full relative">
+                        <button onClick={onClose} className="absolute top-3 right-3 text-neutral-500 hover:text-neutral-700">
+                            <CloseIcon size={28}/>
+                        </button>
+                        <div className="flex items-center justify-center mb-6">
+                            <TrophyIcon size={36} className="text-sky-500 mr-3"/>
+                            <h2 className="text-2xl sm:text-3xl font-bold text-neutral-800">最終排名</h2>
+                        </div>
+                        {rankedPlayers.length > 0 ? (
+                            <div className="space-y-3">
+                                {rankedPlayers.map((player) => (
+                                    <div key={player.id} className={`flex items-center justify-between p-3 rounded-lg shadow
+                                        ${player.rank && player.rank.startsWith('1') ? 'bg-yellow-50 border-yellow-300 border' : 
+                                         player.rank && player.rank.startsWith('2') ? 'bg-gray-50 border-gray-300 border' :
+                                         player.rank && player.rank.startsWith('3') ? 'bg-orange-50 border-orange-300 border' :
+                                         'bg-neutral-50 border-neutral-200 border'}`}>
+                                        <div className="flex items-center">
+                                            <div className={`w-10 h-8 flex items-center justify-center mr-3 rounded-full text-white font-bold text-sm
+                                                ${player.rank && player.rank.startsWith('1') ? 'bg-yellow-400' : player.rank && player.rank.startsWith('2') ? 'bg-gray-400' : player.rank && player.rank.startsWith('3') ? 'bg-orange-400' : 'bg-slate-500'}`}>
+                                                {getMedalDisplay(player.rank)}
+                                            </div>
+                                            <span className="font-semibold text-neutral-700 text-base sm:text-lg">{player.name}</span>
+                                        </div>
+                                        <span className="font-bold text-sky-600 text-lg sm:text-xl">{player.totalScore} <span className="text-xs text-neutral-500">桿</span></span>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <p className="text-neutral-600 text-center text-lg py-8">尚無有效成績進行排名。</p>
+                        )}
+                         <button 
+                            onClick={onClose} 
+                            className="mt-8 w-full bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 rounded-lg shadow-md transition duration-200 ease-in-out transform hover:scale-105 active:scale-95"
+                        >
+                            關閉
+                        </button>
+                    </div>
                 </div>
-              ))}
-              {/* 用於對齊的空格 */}
-              <div className="col-span-1"></div>
+            );
+        };
 
-              {/* 10-18 洞的分數 */}
-              {holeScores.slice(9, 18).map((score, index) => (
-                <div
-                  key={`score-${index + 9}`}
-                  className={`col-span-1 flex items-center justify-center p-2 border border-neutral-300 rounded-md text-sm font-bold transition-all duration-150 ease-in-out cursor-pointer
-                    ${(index + 9) === currentHoleIndex ? 'bg-amber-200 border-amber-400 shadow-md ring-2 ring-amber-500' : 'bg-white hover:bg-neutral-50'}
-                    ${(index + 9) === lastUpdatedHole ? 'bg-emerald-200 border-emerald-400 animate-pulse' : ''}
-                  `}
-                  onClick={() => setCurrentHoleIndex(index + 9)} // 允許點擊球洞以選擇
-                >
-                  {score === 0 ? '' : score}
+        const ModeSelectionScreen = ({ onSelectMode }) => { /* ... */ 
+             return (
+                <div className="min-h-screen bg-gradient-to-br from-sky-400 to-sky-600 flex flex-col items-center justify-center p-8 font-inter text-white">
+                    <div className="text-center mb-12">
+                        <GolfBallIcon size={64} className="mb-4 text-white animate-bounce" />
+                        <h1 className="text-4xl sm:text-5xl font-bold mb-3 tracking-tight">高爾夫計分器</h1>
+                        <p className="text-lg sm:text-xl text-sky-100">選擇您的遊戲模式</p>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-md">
+                        <button
+                            onClick={() => onSelectMode('single')}
+                            className="bg-white/20 hover:bg-white/30 backdrop-blur-md text-white font-semibold py-6 px-8 rounded-xl shadow-lg transition duration-300 ease-in-out transform hover:scale-105 flex flex-col items-center"
+                        >
+                            <UserIcon size={32} className="mb-3" />
+                            <span className="text-xl">單人模式</span>
+                        </button>
+                        <button
+                            onClick={() => onSelectMode('multi')}
+                            className="bg-white/20 hover:bg-white/30 backdrop-blur-md text-white font-semibold py-6 px-8 rounded-xl shadow-lg transition duration-300 ease-in-out transform hover:scale-105 flex flex-col items-center"
+                        >
+                            <UsersIcon size={32} className="mb-3" />
+                            <span className="text-xl">多人模式</span>
+                        </button>
+                    </div>
                 </div>
-              ))}
-              {/* 10-18 洞的總計 */}
-              <div className="col-span-1 flex items-center justify-center p-2 border border-neutral-300 rounded-md bg-sky-100 text-sm font-bold">
-                {holeScores.slice(9, 18).reduce((acc, s) => acc + s, 0)}
-              </div>
-            </div>
-          );
+            );
+        };
+        
+        const PlayerNameInputModal = ({ onStartGame, onCancel }) => { /* ... */ 
+            const [nicknames, setNicknames] = useState(Array(MAX_PLAYERS).fill(""));
 
-          // 數字輸入板 (1-15)
-          const NumberInputPad = ({ handleNumberClick }) => (
+            const handleNicknameChange = (index, value) => {
+                const newNicknames = [...nicknames];
+                newNicknames[index] = value;
+                setNicknames(newNicknames);
+            };
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                onStartGame(nicknames);
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4 font-inter">
+                    <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-2xl p-6 sm:p-8 max-w-lg w-full">
+                        <div className="flex items-center justify-center mb-6">
+                            <EditIcon size={32} className="text-sky-500 mr-3" />
+                            <h2 className="text-2xl sm:text-3xl font-bold text-neutral-800">輸入球員暱稱</h2>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                            {Array.from({ length: MAX_PLAYERS }).map((_, index) => (
+                                <div key={index}>
+                                    <label htmlFor={`player-name-${index}`} className="block text-sm font-medium text-neutral-700 mb-1">
+                                        球員 {index + 1}
+                                    </label>
+                                    <input
+                                        type="text"
+                                        id={`player-name-${index}`}
+                                        value={nicknames[index]}
+                                        onChange={(e) => handleNicknameChange(index, e.target.value)}
+                                        placeholder={`預設：球員 ${index + 1}`}
+                                        maxLength="10" 
+                                        className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:border-sky-500 outline-none transition-shadow"
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-3">
+                            <button
+                                type="button"
+                                onClick={onCancel}
+                                className="w-full sm:w-auto flex-1 bg-gray-400 hover:bg-gray-500 text-gray-800 font-bold py-3 px-6 rounded-lg shadow-md transition duration-200 ease-in-out transform hover:scale-105 active:scale-95"
+                            >
+                                取消
+                            </button>
+                            <button
+                                type="submit"
+                                className="w-full sm:w-auto flex-1 bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-200 ease-in-out transform hover:scale-105 active:scale-95"
+                            >
+                                開始遊戲
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            );
+        };
+
+        const loadFromLocalStorage = (key, defaultValue) => { /* ... */ 
+            try {
+                const item = localStorage.getItem(key);
+                return item ? JSON.parse(item) : defaultValue;
+            } catch (error) {
+                console.warn(`載入 localStorage (${key}) 失敗:`, error);
+                return defaultValue;
+            }
+        };
+        const saveToLocalStorage = (key, value) => { /* ... */ 
+            try {
+                localStorage.setItem(key, JSON.stringify(value));
+            } catch (error) {
+                console.warn(`儲存 localStorage (${key}) 失敗:`, error);
+            }
+        };
+        const removeFromLocalStorage = (key) => { /* ... */ 
+            try {
+                localStorage.removeItem(key);
+            } catch (error) {
+                console.warn(`移除 localStorage (${key}) 失敗:`, error);
+            }
+        }
+
+        const SinglePlayerGame = ({ onBackToMenu }) => {
+            const [playerData, setPlayerData] = useState(() => loadFromLocalStorage(LOCAL_STORAGE_KEYS.SINGLE_PLAYER_DATA, initializeSinglePlayerData()));
+            const [showClearConfirm, setShowClearConfirm] = useState(false);
+            const [lastUpdatedHole, setLastUpdatedHole] = useState(null);
+            // const [showBackToMenuConfirm, setShowBackToMenuConfirm] = useState(false);
+
+            useEffect(() => { /* ... */ 
+                saveToLocalStorage(LOCAL_STORAGE_KEYS.SINGLE_PLAYER_DATA, playerData);
+            }, [playerData]);
+
+            const { scores, currentHoleIndex, name } = playerData;
+            const totalScore = scores.reduce((sum, score) => sum + score, 0);
+
+            const updateScores = (holeIdx, newScore) => { /* ... */ 
+                const newScores = [...scores];
+                newScores[holeIdx] = newScore;
+                setPlayerData(prev => ({ ...prev, scores: newScores }));
+                setLastUpdatedHole(holeIdx);
+                setTimeout(() => setLastUpdatedHole(null), 300);
+            };
+            const updateCurrentHole = (newHoleIdx) => { /* ... */ 
+                setPlayerData(prev => ({ ...prev, currentHoleIndex: newHoleIdx }));
+            };
+            const handleNumberClick = (num) => { /* ... */ 
+                updateScores(currentHoleIndex, num);
+                if (currentHoleIndex < 17) {
+                    updateCurrentHole(currentHoleIndex + 1);
+                }
+            };
+            const handlePlusOne = () => updateScores(currentHoleIndex, (scores[currentHoleIndex] || 0) + 1);
+            const handleMinusOne = () => { /* ... */ 
+                if (scores[currentHoleIndex] > 0) {
+                    updateScores(currentHoleIndex, scores[currentHoleIndex] - 1);
+                }
+            };
+            const handleClearInitiate = () => setShowClearConfirm(true);
+            const handleClearConfirm = () => {  /* ... */ 
+                setPlayerData(initializeSinglePlayerData());
+                removeFromLocalStorage(LOCAL_STORAGE_KEYS.SINGLE_PLAYER_DATA); 
+                setShowClearConfirm(false);
+            };
+            const handleClearCancel = () => setShowClearConfirm(false);
+            const handlePrevHole = () => { if (currentHoleIndex > 0) updateCurrentHole(currentHoleIndex - 1); };
+            const handleNextHole = () => { if (currentHoleIndex < 17) updateCurrentHole(currentHoleIndex + 1); };
+            
+            // *** 返回按鈕直接呼叫 onBackToMenu (由 App 組件處理確認) ***
+            // const handleBackToMenuClick = () => setShowBackToMenuConfirm(true);
+            // const confirmBackToMenu = () => {
+            //     removeFromLocalStorage(LOCAL_STORAGE_KEYS.SINGLE_PLAYER_DATA);
+            //     onBackToMenu(); 
+            // };
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-neutral-100 to-neutral-300 flex flex-col items-center justify-start p-4 font-inter overflow-auto">
+                    <div className="w-full max-w-lg mx-auto mb-6 flex justify-start sticky top-4 z-20">
+                        <button onClick={onBackToMenu} className="bg-neutral-500 hover:bg-neutral-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md text-sm flex items-center gap-2">
+                            <ArrowLeftIcon size={14}/> 返回選單
+                        </button>
+                    </div>
+                    <div className="flex flex-col sm:flex-row justify-between items-center bg-neutral-700 text-white font-bold py-3 px-6 rounded-lg shadow-xl text-lg w-full max-w-md mx-auto mb-6">
+                        <div className="flex items-center justify-center w-full sm:w-auto mb-2 sm:mb-0">
+                            總桿數 <span className="ml-3 text-3xl font-mono">{totalScore}</span>
+                        </div>
+                        <div className="flex items-center justify-center w-full sm:w-auto">
+                            目前球洞: <span className="ml-2 text-sky-300 text-3xl font-mono">{currentHoleIndex + 1}</span>
+                        </div>
+                    </div>
+                    <HoleGrid scores={scores} currentHoleIndex={currentHoleIndex} onHoleSelect={updateCurrentHole} lastUpdatedHole={lastUpdatedHole} />
+                    <NumberInputPad handleNumberClick={handleNumberClick} />
+                    <NavAdjustButtons handlePrevHole={handlePrevHole} handlePlusOne={handlePlusOne} handleMinusOne={handleMinusOne} handleNextHole={handleNextHole} disabledPrev={currentHoleIndex === 0} disabledNext={currentHoleIndex === 17} />
+                    <button onClick={handleClearInitiate} className="w-full max-w-md mt-6 bg-red-700 hover:bg-red-800 text-white font-bold py-3 px-6 rounded-lg shadow-md text-lg transition duration-200 ease-in-out transform hover:scale-105 active:scale-95">
+                        清除所有紀錄
+                    </button>
+                    {showClearConfirm && <ConfirmationModal message="您確定要清除所有桿數嗎？此操作無法復原。" onConfirm={handleClearConfirm} onCancel={handleClearCancel} />}
+                </div>
+            );
+        };
+        
+        const MultiPlayerGame = ({ onBackToMenu, initialPlayersDataFromApp }) => {
+            const [playersData, setPlayersData] = useState(() => loadFromLocalStorage(LOCAL_STORAGE_KEYS.MULTI_PLAYERS_DATA, initialPlayersDataFromApp || initializeMultiPlayersData()));
+            const [currentPlayerIndex, setCurrentPlayerIndex] = useState(() => loadFromLocalStorage(LOCAL_STORAGE_KEYS.MULTI_CURRENT_PLAYER_INDEX, 0));
+            
+            const [showClearPlayerConfirm, setShowClearPlayerConfirm] = useState(false);
+            const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
+            const [lastUpdatedHoleForPlayer, setLastUpdatedHoleForPlayer] = useState(null);
+            const [showRankingsModal, setShowRankingsModal] = useState(false);
+            const [rankedPlayers, setRankedPlayers] = useState([]);
+            // const [showBackToMenuConfirm, setShowBackToMenuConfirm] = useState(false);
+            const [editingPlayerId, setEditingPlayerId] = useState(null);
+            const [editingName, setEditingName] = useState("");
+
+            useEffect(() => { /* ... */ 
+                saveToLocalStorage(LOCAL_STORAGE_KEYS.MULTI_PLAYERS_DATA, playersData);
+            }, [playersData]);
+            useEffect(() => { /* ... */ 
+                saveToLocalStorage(LOCAL_STORAGE_KEYS.MULTI_CURRENT_PLAYER_INDEX, currentPlayerIndex);
+            }, [currentPlayerIndex]);
+
+            const activePlayer = playersData[currentPlayerIndex];
+            const activePlayerCurrentHole = activePlayer.currentHoleIndex;
+
+            const handlePlayerSelect = (index) => setCurrentPlayerIndex(index);
+            const handleEditNameStart = (playerId, currentName) => { /* ... */ 
+                setEditingPlayerId(playerId);
+                setEditingName(currentName);
+            };
+            const handleEditNameChange = (event) => { /* ... */ 
+                setEditingName(event.target.value);
+            };
+            const handleEditNameConfirm = (playerId) => { /* ... */ 
+                if (editingName.trim() === "") {
+                    setEditingPlayerId(null);
+                    return;
+                }
+                const newPlayersData = playersData.map(p => 
+                    p.id === playerId ? { ...p, name: editingName.trim() } : p
+                );
+                setPlayersData(newPlayersData);
+                setEditingPlayerId(null);
+            };
+            const updatePlayerScores = (playerIdx, holeIdx, newScore) => { /* ... */ 
+                const newPlayersData = [...playersData];
+                newPlayersData[playerIdx].scores[holeIdx] = newScore;
+                setPlayersData(newPlayersData);
+                setLastUpdatedHoleForPlayer({ playerIdx, holeIdx });
+                setTimeout(() => setLastUpdatedHoleForPlayer(null), 300);
+            };
+            const updatePlayerCurrentHole = (playerIdx, newHoleIdx) => { /* ... */ 
+                const newPlayersData = [...playersData];
+                newPlayersData[playerIdx].currentHoleIndex = newHoleIdx;
+                setPlayersData(newPlayersData);
+            };
+            const handleNumberClick = (num) => { /* ... */ 
+                updatePlayerScores(currentPlayerIndex, activePlayerCurrentHole, num);
+                if (activePlayerCurrentHole < 17) {
+                updatePlayerCurrentHole(currentPlayerIndex, activePlayerCurrentHole + 1);
+                }
+            };
+            const handlePlusOne = () => { /* ... */ 
+                const currentScore = activePlayer.scores[activePlayerCurrentHole] || 0;
+                updatePlayerScores(currentPlayerIndex, activePlayerCurrentHole, currentScore + 1);
+            };
+            const handleMinusOne = () => { /* ... */ 
+                const currentScore = activePlayer.scores[activePlayerCurrentHole];
+                if (currentScore > 0) {
+                updatePlayerScores(currentPlayerIndex, activePlayerCurrentHole, currentScore - 1);
+                }
+            };
+            const handleClearPlayerInitiate = () => setShowClearPlayerConfirm(true);
+            const handleClearPlayerConfirm = () => { /* ... */ 
+                const newPlayersData = [...playersData];
+                newPlayersData[currentPlayerIndex].scores = initializePlayerScores();
+                newPlayersData[currentPlayerIndex].currentHoleIndex = 0;
+                setPlayersData(newPlayersData);
+                setShowClearPlayerConfirm(false);
+            };
+            const handleClearPlayerCancel = () => setShowClearPlayerConfirm(false);
+            const handleClearAllInitiate = () => setShowClearAllConfirm(true);
+            const handleClearAllConfirm = () => {  /* ... */ 
+                const resetPlayersData = playersData.map((player, index) => ({
+                    ...player,
+                    name: player.name, 
+                    scores: initializePlayerScores(),
+                    currentHoleIndex: 0,
+                }));
+                setPlayersData(resetPlayersData);
+                setCurrentPlayerIndex(0);
+                removeFromLocalStorage(LOCAL_STORAGE_KEYS.MULTI_PLAYERS_DATA); 
+                removeFromLocalStorage(LOCAL_STORAGE_KEYS.MULTI_CURRENT_PLAYER_INDEX);
+                setShowClearAllConfirm(false);
+            };
+            const handleClearAllCancel = () => setShowClearAllConfirm(false);
+            const handlePrevHole = () => { /* ... */ 
+                if (activePlayerCurrentHole > 0) {
+                updatePlayerCurrentHole(currentPlayerIndex, activePlayerCurrentHole - 1);
+                }
+            };
+            const handleNextHole = () => { /* ... */ 
+                if (activePlayerCurrentHole < 17) {
+                updatePlayerCurrentHole(currentPlayerIndex, activePlayerCurrentHole + 1);
+                }
+            };
+            
+            const handleCalculateScores = () => {
+                const playersWithTotals = playersData
+                    .map(player => ({
+                        ...player,
+                        totalScore: player.scores.reduce((sum, score) => sum + score, 0)
+                    }))
+                    .filter(player => player.totalScore > 0 || player.scores.some(s => s !== 0)); 
+
+                const sortedPlayersByScore = [...playersWithTotals].sort((a, b) => a.totalScore - b.totalScore);
+
+                let rankCounter = 0;
+                let lastScore = -Infinity; // 使用一個不可能的分數作為初始 lastScore
+                const playersWithFinalRankString = sortedPlayersByScore.map((player, index) => {
+                    if (player.totalScore !== lastScore) {
+                        rankCounter = index + 1; // 只有當分數不同時，名次才遞增
+                        lastScore = player.totalScore;
+                    }
+                    // 格式化名次字串
+                    let rankStr = rankCounter.toString();
+                    if (rankStr.endsWith('1') && rankStr !== '11') rankStr += 'st';
+                    else if (rankStr.endsWith('2') && rankStr !== '12') rankStr += 'nd';
+                    else if (rankStr.endsWith('3') && rankStr !== '13') rankStr += 'rd';
+                    else rankStr += 'th';
+                    return { ...player, rank: rankStr };
+                });
+                
+                setRankedPlayers(playersWithFinalRankString);
+                setShowRankingsModal(true);
+            };
+
+            // *** 返回按鈕直接呼叫 onBackToMenu ***
+            // const handleBackToMenuClick = () => setShowBackToMenuConfirm(true);
+            // const confirmBackToMenu = () => {
+            //     removeFromLocalStorage(LOCAL_STORAGE_KEYS.MULTI_PLAYERS_DATA);
+            //     removeFromLocalStorage(LOCAL_STORAGE_KEYS.MULTI_CURRENT_PLAYER_INDEX);
+            //     onBackToMenu();
+            // };
+
+            return (
+                <div className="min-h-screen bg-gradient-to-br from-neutral-100 to-neutral-300 flex flex-col items-center justify-start p-4 font-inter overflow-auto selection:bg-amber-500 selection:text-white">
+                    <div className="w-full max-w-lg mx-auto mb-6 flex justify-start sticky top-4 z-20">
+                        <button onClick={onBackToMenu} className="bg-neutral-500 hover:bg-neutral-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md text-sm flex items-center gap-2">
+                           <ArrowLeftIcon size={14}/> 返回選單
+                        </button>
+                    </div>
+                    <PlayerSelection 
+                        playersData={playersData} 
+                        currentPlayerIndex={currentPlayerIndex} 
+                        onPlayerSelect={handlePlayerSelect}
+                        editingPlayerId={editingPlayerId}
+                        editingName={editingName}
+                        onEditNameStart={handleEditNameStart}
+                        onEditNameChange={handleEditNameChange}
+                        onEditNameConfirm={handleEditNameConfirm}
+                    />
+                    <HoleGrid scores={activePlayer.scores} currentHoleIndex={activePlayerCurrentHole} onHoleSelect={(holeIdx) => updatePlayerCurrentHole(currentPlayerIndex, holeIdx)} lastUpdatedHole={lastUpdatedHoleForPlayer ? (lastUpdatedHoleForPlayer.playerIdx === currentPlayerIndex ? lastUpdatedHoleForPlayer.holeIdx : null) : null} />
+                    <NumberInputPad handleNumberClick={handleNumberClick} />
+                    <NavAdjustButtons handlePrevHole={handlePrevHole} handlePlusOne={handlePlusOne} handleMinusOne={handleMinusOne} handleNextHole={handleNextHole} disabledPrev={activePlayerCurrentHole === 0} disabledNext={activePlayerCurrentHole === 17} />
+                    <button onClick={handleCalculateScores} className="w-full max-w-md mt-6 bg-sky-600 hover:bg-sky-700 text-white font-bold py-3 px-6 rounded-lg shadow-md text-lg transition duration-200 ease-in-out transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2">
+                        <TrophyIcon size={20} /> 結算桿數 / 查看排名
+                    </button>
+                    <div className="flex flex-col sm:flex-row gap-2 mt-2 w-full max-w-md">
+                        <button onClick={handleClearPlayerInitiate} className="flex-1 bg-orange-600 hover:bg-orange-700 text-white font-bold py-3 px-4 rounded-lg shadow-md text-sm transition duration-200 ease-in-out transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2">
+                            <UserIcon size={16} /> 清除 {activePlayer.name}
+                        </button>
+                        <button onClick={handleClearAllInitiate} className="flex-1 bg-red-700 hover:bg-red-800 text-white font-bold py-3 px-4 rounded-lg shadow-md text-sm transition duration-200 ease-in-out transform hover:scale-105 active:scale-95 flex items-center justify-center gap-2">
+                            <UsersIcon size={16} /> 清除所有球員
+                        </button>
+                    </div>
+                    {showClearPlayerConfirm && <ConfirmationModal message={`您確定要清除 ${activePlayer.name} 的所有桿數嗎？此操作無法復原。`} onConfirm={handleClearPlayerConfirm} onCancel={handleClearPlayerCancel} />}
+                    {showClearAllConfirm && <ConfirmationModal message={`您確定要清除所有球員的桿數紀錄嗎？此操作無法復原。`} onConfirm={handleClearAllConfirm} onCancel={handleClearAllCancel} confirmText="全部清除" />}
+                    {showRankingsModal && <RankingsModal rankedPlayers={rankedPlayers} onClose={() => setShowRankingsModal(false)} />}
+                </div>
+            );
+        };
+        
+        const HoleGrid = ({ scores, currentHoleIndex, onHoleSelect, lastUpdatedHole }) => { /* ... */ 
+            return (
+                <div className="grid grid-cols-10 gap-1 p-2 bg-neutral-200 rounded-lg shadow-inner w-full max-w-md mx-auto">
+                    {Array.from({ length: 9 }, (_, i) => i + 1).map(holeNum => (
+                        <div key={`header-${holeNum}`} className="text-center text-sm font-semibold text-neutral-600 p-1">{holeNum}</div>
+                    ))}
+                    <div className="col-span-1"></div>
+                    {scores.slice(0, 9).map((score, index) => (
+                        <div key={`score-${index}`} className={`col-span-1 flex items-center justify-center p-2 border border-neutral-300 rounded-md text-base font-bold transition-all duration-150 ease-in-out cursor-pointer ${index === currentHoleIndex ? 'bg-amber-200 border-amber-400 shadow-md ring-2 ring-amber-500' : 'bg-white hover:bg-neutral-50'} ${lastUpdatedHole === index ? 'bg-emerald-200 border-emerald-400 animate-pulse' : ''}`} onClick={() => onHoleSelect(index)}>
+                            {score === 0 ? '' : score}
+                        </div>
+                    ))}
+                    <div className="col-span-1 flex items-center justify-center p-2 border border-neutral-300 rounded-md bg-sky-100 text-base font-bold">
+                        {scores.slice(0, 9).reduce((acc, s) => acc + s, 0)}
+                    </div>
+                    {Array.from({ length: 9 }, (_, i) => i + 10).map(holeNum => (
+                        <div key={`header-${holeNum}`} className="text-center text-sm font-semibold text-neutral-600 p-1">{holeNum}</div>
+                    ))}
+                    <div className="col-span-1"></div>
+                    {scores.slice(9, 18).map((score, index) => {
+                        const holeActualIndex = index + 9;
+                        return (
+                            <div key={`score-${holeActualIndex}`} className={`col-span-1 flex items-center justify-center p-2 border border-neutral-300 rounded-md text-base font-bold transition-all duration-150 ease-in-out cursor-pointer ${holeActualIndex === currentHoleIndex ? 'bg-amber-200 border-amber-400 shadow-md ring-2 ring-amber-500' : 'bg-white hover:bg-neutral-50'} ${lastUpdatedHole === holeActualIndex ? 'bg-emerald-200 border-emerald-400 animate-pulse' : ''}`} onClick={() => onHoleSelect(holeActualIndex)}>
+                                {score === 0 ? '' : score}
+                            </div>
+                        );
+                    })}
+                    <div className="col-span-1 flex items-center justify-center p-2 border border-neutral-300 rounded-md bg-sky-100 text-base font-bold">
+                        {scores.slice(9, 18).reduce((acc, s) => acc + s, 0)}
+                    </div>
+                </div>
+            );
+        };
+        const NumberInputPad = ({ handleNumberClick }) => ( /* ... */ 
             <div className="grid grid-cols-5 gap-2 p-4 bg-neutral-200 rounded-lg shadow-inner w-full max-w-md mx-auto mt-4">
               {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map(num => (
                 <button
@@ -217,88 +551,208 @@
                 </button>
               ))}
             </div>
-          );
-
-          // 導覽和調整按鈕組件
-          const NavAdjustButtons = ({ handlePrevHole, handlePlusOne, handleMinusOne, handleNextHole }) => (
+        );
+        const NavAdjustButtons = ({ handlePrevHole, handlePlusOne, handleMinusOne, handleNextHole, disabledPrev, disabledNext }) => ( /* ... */ 
             <div className="flex justify-center items-center gap-2 p-2 w-full max-w-md mx-auto mt-2">
-              <button
-                onClick={handlePrevHole}
-                disabled={currentHoleIndex === 0}
-                className="bg-neutral-500 hover:bg-neutral-600 text-white font-bold py-3 px-4 rounded-lg shadow-md text-lg
-                           transition duration-200 ease-in-out transform hover:scale-105 active:scale-95 flex-grow disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+              <button onClick={handlePrevHole} disabled={disabledPrev} className="bg-neutral-500 hover:bg-neutral-600 text-white font-bold py-3 px-4 rounded-lg shadow-md text-lg transition duration-200 ease-in-out transform hover:scale-105 active:scale-95 flex-grow disabled:opacity-50 disabled:cursor-not-allowed">
                 <ChevronLeft size={24} />
               </button>
-              <button
-                onClick={handleMinusOne}
-                className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3 px-6 rounded-lg shadow-md text-lg
-                           transition duration-200 ease-in-out transform hover:scale-105 active:scale-95 flex-grow"
-              >
+              <button onClick={handleMinusOne} className="bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3 px-6 rounded-lg shadow-md text-lg transition duration-200 ease-in-out transform hover:scale-105 active:scale-95 flex-grow">
                 - 1
               </button>
-              <button
-                onClick={handlePlusOne}
-                className="bg-red-700 hover:bg-red-800 text-white font-bold py-3 px-6 rounded-lg shadow-md text-lg
-                           transition duration-200 ease-in-out transform hover:scale-105 active:scale-95 flex-grow"
-              >
+              <button onClick={handlePlusOne} className="bg-red-700 hover:bg-red-800 text-white font-bold py-3 px-6 rounded-lg shadow-md text-lg transition duration-200 ease-in-out transform hover:scale-105 active:scale-95 flex-grow">
                 + 1
               </button>
-              <button
-                onClick={handleNextHole}
-                disabled={currentHoleIndex === 17}
-                className="bg-neutral-500 hover:bg-neutral-600 text-white font-bold py-3 px-4 rounded-lg shadow-md text-lg
-                           transition duration-200 ease-in-out transform hover:scale-105 active:scale-95 flex-grow disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+              <button onClick={handleNextHole} disabled={disabledNext} className="bg-neutral-500 hover:bg-neutral-600 text-white font-bold py-3 px-4 rounded-lg shadow-md text-lg transition duration-200 ease-in-out transform hover:scale-105 active:scale-95 flex-grow disabled:opacity-50 disabled:cursor-not-allowed">
                 <ChevronRight size={24} />
               </button>
             </div>
-          );
+        );
+        
+        const PlayerSelection = ({ playersData, currentPlayerIndex, onPlayerSelect, editingPlayerId, editingName, onEditNameStart, onEditNameChange, onEditNameConfirm }) => { /* ... */ 
+            const nameInputRef = useRef(null);
 
-          return (
-            <div className="min-h-screen bg-gradient-to-br from-neutral-100 to-neutral-300 flex flex-col items-center justify-start p-4 font-inter overflow-auto selection:bg-amber-500 selection:text-white">
-              {/* 總桿數和目前球洞顯示 */}
-              <div className="flex flex-col sm:flex-row justify-between items-center bg-neutral-700 text-white font-bold py-3 px-6 rounded-lg shadow-xl text-lg w-full max-w-md mx-auto mb-4 sticky top-4 z-10">
-                <div className="flex items-center justify-center w-full sm:w-auto mb-2 sm:mb-0">
-                  總桿數 <span className="ml-3 text-3xl font-mono">{totalScore}</span>
-                </div>
-                <div className="flex items-center justify-center w-full sm:w-auto">
-                  目前球洞: <span className="ml-2 text-sky-300 text-3xl font-mono">{currentHoleIndex + 1}</span>
-                </div>
-              </div>
+            useEffect(() => {
+                if (editingPlayerId !== null && nameInputRef.current) {
+                    nameInputRef.current.focus();
+                    nameInputRef.current.select();
+                }
+            }, [editingPlayerId]);
+            
+            return (
+            <div className="grid grid-cols-4 gap-2 mb-6 w-full max-w-lg mx-auto">
+              {playersData.map((player, index) => {
+                const totalScore = player.scores.reduce((acc, s) => acc + s, 0);
+                const isEditing = editingPlayerId === player.id;
 
-              <HoleGrid />
-              <NumberInputPad handleNumberClick={handleNumberClick} />
-              <NavAdjustButtons
-                handlePrevHole={handlePrevHole}
-                handlePlusOne={handlePlusOne}
-                handleMinusOne={handleMinusOne}
-                handleNextHole={handleNextHole}
-              />
-
-              <button
-                onClick={handleClearInitiate}
-                className="bg-red-700 hover:bg-red-800 text-white font-bold py-3 px-6 rounded-lg shadow-md text-lg mt-4 w-full max-w-md
-                           transition duration-200 ease-in-out transform hover:scale-105 active:scale-95"
-              >
-                清除所有紀錄
-              </button>
-
-              {/* 確認 Modal */}
-              {showClearConfirm && (
-                <ConfirmationModal
-                  message="您確定要清除所有桿數嗎？此操作無法復原。"
-                  onConfirm={handleClearConfirm}
-                  onCancel={handleClearCancel}
-                />
-              )}
+                return (
+                  <div
+                    key={player.id}
+                    onClick={() => !isEditing && onPlayerSelect(index)} 
+                    className={`p-2 rounded-lg shadow-md transition-all duration-200 ease-in-out flex flex-col items-center justify-between aspect-[3/2] sm:aspect-auto cursor-pointer
+                                ${currentPlayerIndex === index && !isEditing 
+                                    ? 'bg-sky-500 text-white ring-2 ring-sky-300' 
+                                    : 'bg-neutral-600 hover:bg-neutral-700 text-neutral-200'}`}
+                  >
+                    <div className="flex items-center justify-center mb-1 w-full">
+                        <UserIcon size={14} className={currentPlayerIndex === index && !isEditing ? 'text-white' : 'text-neutral-400'} />
+                        {isEditing ? (
+                            <input 
+                                ref={nameInputRef}
+                                type="text" 
+                                value={editingName} 
+                                onChange={onEditNameChange} 
+                                onBlur={() => onEditNameConfirm(player.id)}
+                                onKeyDown={(e) => { if (e.key === 'Enter') onEditNameConfirm(player.id); if (e.key === 'Escape') setEditingPlayerId(null);}}
+                                className="ml-1.5 p-0.5 text-xs sm:text-sm font-semibold bg-white text-neutral-800 rounded border border-sky-500 w-full text-center"
+                                maxLength="10"
+                            />
+                        ) : (
+                            <span className="ml-1.5 font-semibold text-xs sm:text-sm truncate" title={player.name}>{player.name}</span>
+                        )}
+                        {!isEditing && (
+                            <button onClick={(e) => { e.stopPropagation(); onEditNameStart(player.id, player.name); }} className="ml-auto pl-1 text-neutral-400 hover:text-white">
+                                <EditIcon size={10} />
+                            </button>
+                        )}
+                         {isEditing && (
+                             <button onClick={(e) => { e.stopPropagation(); onEditNameConfirm(player.id); }} className="ml-1 text-sky-600 hover:text-sky-400">
+                                <CheckIcon size={12} />
+                            </button>
+                         )}
+                    </div>
+                    <div className="text-center w-full">
+                        <div className="text-xl sm:text-2xl font-bold">{totalScore}</div>
+                        <div className="text-sm text-neutral-300 mt-0.5">洞: {player.currentHoleIndex + 1}</div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          );
+        );
         };
 
-        // 將 React 應用程式渲染到 HTML 頁面中的 'root' 元素
+        const App = () => {
+            const [gameMode, setGameMode] = useState(() => loadFromLocalStorage(LOCAL_STORAGE_KEYS.GAME_MODE, null));
+            const [showNameInputModal, setShowNameInputModal] = useState(false);
+            const [initialMultiPlayerDataFromApp, setInitialMultiPlayerDataFromApp] = useState(null);
+            const [showBackToMenuConfirmFromApp, setShowBackToMenuConfirmFromApp] = useState(false);
+            const [pendingGameMode, setPendingGameMode] = useState(null);
+
+            useEffect(() => { /* ... */ 
+                const savedMode = loadFromLocalStorage(LOCAL_STORAGE_KEYS.GAME_MODE, null);
+                if (savedMode) {
+                    if (savedMode === 'multi') {
+                        const savedMultiData = loadFromLocalStorage(LOCAL_STORAGE_KEYS.MULTI_PLAYERS_DATA, null);
+                        if (savedMultiData) {
+                            setInitialMultiPlayerDataFromApp(savedMultiData);
+                        }
+                    }
+                    setGameMode(savedMode);
+                }
+            }, []);
+
+            useEffect(() => { /* ... */ 
+                if (gameMode !== null) { 
+                    saveToLocalStorage(LOCAL_STORAGE_KEYS.GAME_MODE, gameMode);
+                } else {
+                    removeFromLocalStorage(LOCAL_STORAGE_KEYS.GAME_MODE); 
+                }
+            }, [gameMode]);
+
+            const handleSelectMode = (mode) => { /* ... */ 
+                if (gameMode) { 
+                    setPendingGameMode(mode); 
+                    setShowBackToMenuConfirmFromApp(true); 
+                } else { 
+                    if (mode === 'multi') {
+                        const savedMultiData = loadFromLocalStorage(LOCAL_STORAGE_KEYS.MULTI_PLAYERS_DATA, null);
+                        if (savedMultiData) { 
+                           setInitialMultiPlayerDataFromApp(savedMultiData);
+                           setGameMode('multi');
+                        } else { 
+                           setShowNameInputModal(true);
+                        }
+                    } else {
+                        setGameMode(mode);
+                    }
+                }
+            };
+            
+            const confirmAppLevelBackToMenu = (switchToNewMode) => { /* ... */ 
+                if (gameMode === 'single') {
+                    removeFromLocalStorage(LOCAL_STORAGE_KEYS.SINGLE_PLAYER_DATA);
+                } else if (gameMode === 'multi') {
+                    removeFromLocalStorage(LOCAL_STORAGE_KEYS.MULTI_PLAYERS_DATA);
+                    removeFromLocalStorage(LOCAL_STORAGE_KEYS.MULTI_CURRENT_PLAYER_INDEX);
+                }
+                
+                if (switchToNewMode && pendingGameMode === 'multi') {
+                    // 如果是從其他模式切換到多人，且 localStorage 沒有多人資料，則顯示暱稱輸入
+                    const savedMultiData = loadFromLocalStorage(LOCAL_STORAGE_KEYS.MULTI_PLAYERS_DATA, null);
+                     if (savedMultiData && initialMultiPlayerDataFromApp) { // 如果已有 initialMultiPlayerDataFromApp (例如從暱稱輸入來)，則直接用
+                        setGameMode('multi');
+                     } else if (savedMultiData) {
+                        setInitialMultiPlayerDataFromApp(savedMultiData);
+                        setGameMode('multi');
+                     }
+                     else {
+                        setShowNameInputModal(true);
+                     }
+                } else if (switchToNewMode) {
+                    setGameMode(pendingGameMode);
+                } else { 
+                    setGameMode(null);
+                }
+                setShowBackToMenuConfirmFromApp(false);
+                setPendingGameMode(null);
+            };
+
+            const handleStartMultiPlayerGame = (nicknames) => { /* ... */ 
+                removeFromLocalStorage(LOCAL_STORAGE_KEYS.MULTI_PLAYERS_DATA);
+                removeFromLocalStorage(LOCAL_STORAGE_KEYS.MULTI_CURRENT_PLAYER_INDEX);
+                setInitialMultiPlayerDataFromApp(initializeMultiPlayersData(nicknames));
+                setGameMode('multi');
+                setShowNameInputModal(false);
+            };
+
+            const handleCancelNameInput = () => { /* ... */ 
+                setShowNameInputModal(false);
+                setGameMode(null); 
+            };
+
+            const handleBackToMenuFromGame = () => { /* ... */ 
+                setPendingGameMode(null); 
+                setShowBackToMenuConfirmFromApp(true);
+            };
+
+            if (showNameInputModal) {
+                return <PlayerNameInputModal onStartGame={handleStartMultiPlayerGame} onCancel={handleCancelNameInput} />;
+            }
+            
+            if (showBackToMenuConfirmFromApp) {
+                const message = pendingGameMode 
+                    ? `切換模式將會清除目前遊戲 (${gameMode === 'single' ? '單人' : '多人'}) 的所有數據，確定嗎？`
+                    : `返回選單將會清除目前遊戲 (${gameMode === 'single' ? '單人' : '多人'}) 的所有數據，確定嗎？`;
+                return <ConfirmationModal 
+                            message={message}
+                            onConfirm={() => confirmAppLevelBackToMenu(!!pendingGameMode)} 
+                            onCancel={() => { setShowBackToMenuConfirmFromApp(false); setPendingGameMode(null); }} 
+                        />;
+            }
+
+            if (gameMode === 'single') {
+                return <SinglePlayerGame onBackToMenu={handleBackToMenuFromGame} />;
+            }
+
+            if (gameMode === 'multi') {
+                return <MultiPlayerGame onBackToMenu={handleBackToMenuFromGame} initialPlayersDataFromApp={initialMultiPlayerDataFromApp} />;
+            }
+
+            return <ModeSelectionScreen onSelectMode={handleSelectMode} />;
+        };
+
         ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
-        // React 應用程式的程式碼在這裡結束
     </script>
 </body>
 </html>
